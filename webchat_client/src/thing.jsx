@@ -1,6 +1,6 @@
 import {useState} from 'react'
 
-export default function MessageBox({socket}) {
+export default function MessageBox({socket, name}) {
 	const [postContent, setPost] = useState("");
 
 	function handleSubmit(e) {
@@ -13,7 +13,7 @@ export default function MessageBox({socket}) {
 			return
 		}
 		// socket.current.send("<" + user + "> " + postContent)
-		socket.current.send(JSON.stringify({msg: postContent, kind: 1}))
+		socket.current.send(JSON.stringify({guy: name, msg: postContent, kind: 1}))
 		setPost("")
 	}
 
