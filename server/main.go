@@ -33,10 +33,11 @@ type User struct {
 }
 
 type Message struct {
-	Kind msgType `json:"kind"`
-	Guy  string  `json:"guy"`
-	Msg  string  `json:"msg"`
-	conn *ws.Conn
+	Kind      msgType `json:"kind"`
+	Guy       string  `json:"guy"`
+	Msg       string  `json:"msg"`
+	conn      *ws.Conn
+	timestamp time.Time
 }
 
 func messagePasser() {
@@ -58,7 +59,9 @@ func messagePasser() {
 func main() {
 	http.HandleFunc("/", userHandler)
 
+	// run routines for message passer and serving the client
 	go messagePasser()
+	go serveClient("8096")
 
 	fmt.Println("listening on 3000")
 	http.ListenAndServe("0.0.0.0:3000", nil)
@@ -126,6 +129,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 	//send new user all messages?
 	go func(con *ws.Conn) {
 		for _, msg := range messages {
+			//sleep to not send packets too fast?
 			time.Sleep(50 * time.Millisecond)
 			sendMessage(msg, ctx, con)
 		}
@@ -153,5 +157,17 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Printf("got: <%s> %s\n", msg.Guy, msg.Msg)
 	}
+}
 
+func serveClient(port string) {
+	fs := http.FileServer(http.Dir("./dist"))
+
+	mux := http.NewServeMux()
+	mux.Handle("/", fs)
+
+	fmt.Println("serving client 8096")
+	err := http.ListenAndServe(":"+port, mux)
+	if err != nil {
+		panic(err)
+	}
 }
