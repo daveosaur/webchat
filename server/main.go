@@ -1,21 +1,30 @@
+/*
+TODO: implement cookies on user connect, verify with db?
+*/
 package main
 
 import (
 	"context"
+	// "database/sql"
+	// "errors"
+
 	"fmt"
 	"net/http"
 	"slices"
 	"sync"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
 	ws "nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 )
 
+// globals
 var (
 	messages    = make([]*Message, 0, 100)
 	messageChan = make(chan *Message, 100)
 	users       = make([]*User, 0, 10)
+	dbChan      = make(chan interface{}, 100)
 	mut         sync.Mutex
 )
 
@@ -29,7 +38,8 @@ const (
 
 type User struct {
 	Name string
-	conn *ws.Conn
+	UUID string
+	Conn *ws.Conn
 }
 
 type Message struct {
@@ -40,11 +50,34 @@ type Message struct {
 	timestamp time.Time
 }
 
+func main() {
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", userHandler)
+	err := prepareDatabase()
+	defer db.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	// run routines for message passer and serving the client
+	go messagePasser()
+	go serveClient("8096")
+
+	fmt.Println("listening on 3000")
+	err = http.ListenAndServe("0.0.0.0:3000", mux)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
 func messagePasser() {
 	ctx := context.Background()
 
 	for {
 		msg := <-messageChan
+
 		mut.Lock()
 		if msg.Kind == MESSAGE {
 			messages = append(messages, msg)
@@ -56,26 +89,14 @@ func messagePasser() {
 	}
 }
 
-func main() {
-	http.HandleFunc("/", userHandler)
-
-	// run routines for message passer and serving the client
-	go messagePasser()
-	go serveClient("8096")
-
-	fmt.Println("listening on 3000")
-	http.ListenAndServe("0.0.0.0:3000", nil)
-
-}
-
 func sendMessage(msg *Message, ctx context.Context, target *ws.Conn) {
 	switch msg.Kind {
 	case CONNECT:
 		switch target {
 		case nil:
-			users = append(users, &User{Name: msg.Guy, conn: msg.conn})
+			users = append(users, &User{Name: msg.Guy, Conn: msg.conn})
 			for _, user := range users {
-				user.conn.Write(ctx, ws.MessageText, []byte(fmt.Sprintf("%s connected!", msg.Guy)))
+				user.Conn.Write(ctx, ws.MessageText, []byte(fmt.Sprintf("%s connected!", msg.Guy)))
 			}
 			// default:
 			// 	target.Write(ctx, ws.MessageText, []byte(fmt.Sprintf("%s connected!", msg.Guy)))
@@ -84,7 +105,7 @@ func sendMessage(msg *Message, ctx context.Context, target *ws.Conn) {
 		switch target {
 		case nil:
 			for _, user := range users {
-				user.conn.Write(ctx, ws.MessageText, []byte(fmt.Sprintf("<%s> %s", msg.Guy, msg.Msg)))
+				user.Conn.Write(ctx, ws.MessageText, []byte(fmt.Sprintf("<%s> %s", msg.Guy, msg.Msg)))
 			}
 		default:
 			target.Write(ctx, ws.MessageText, []byte(fmt.Sprintf("<%s> %s", msg.Guy, msg.Msg)))
@@ -94,13 +115,13 @@ func sendMessage(msg *Message, ctx context.Context, target *ws.Conn) {
 		case nil:
 			var oldname string
 			for _, user := range users {
-				if user.conn == msg.conn {
+				if user.Conn == msg.conn {
 					oldname = user.Name
 					user.Name = msg.Guy
 				}
 			}
 			for _, user := range users {
-				user.conn.Write(ctx, ws.MessageText, []byte(fmt.Sprintf("%s is now %s", oldname, msg.Guy)))
+				user.Conn.Write(ctx, ws.MessageText, []byte(fmt.Sprintf("%s is now %s", oldname, msg.Guy)))
 
 			}
 		}
@@ -108,8 +129,11 @@ func sendMessage(msg *Message, ctx context.Context, target *ws.Conn) {
 }
 
 func userHandler(w http.ResponseWriter, r *http.Request) {
-
 	fmt.Println("connected!")
+
+	// TODO:do db stuff
+	// TODO: add user to db if they dont exist.
+
 	//lol cors
 	opts := ws.AcceptOptions{InsecureSkipVerify: true}
 	c, err := ws.Accept(w, r, &opts)
@@ -136,6 +160,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 	}(c)
 
 	messageChan <- u
+	dbChan <- u
 
 	for {
 		var msg Message
@@ -146,7 +171,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 			mut.Lock()
 			defer mut.Unlock()
 			for i, user := range users {
-				if user.conn == c {
+				if user.Conn == c {
 					users = slices.Delete(users, i, i+1)
 				}
 			}
@@ -155,7 +180,7 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
 		msg.conn = c
 		messageChan <- &msg
 
-		fmt.Printf("got: <%s> %s\n", msg.Guy, msg.Msg)
+		fmt.Printf("<%s> %s\n", msg.Guy, msg.Msg)
 	}
 }
 

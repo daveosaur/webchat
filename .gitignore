@@ -1,3 +1,4 @@
 /webchat_client/node_modules
 /webchat_client/dist
 
+server/webchat.db

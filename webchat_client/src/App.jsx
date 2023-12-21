@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
-import MessageBox from './thing.jsx'
+import ChatBox from './chatbox.jsx'
 
 const starterNames = ["guy", "bobby", "dave", "notdave", "gooble", "borb"];
 
@@ -8,6 +8,7 @@ function App() {
   const [messages, setMessage] = useState("");
   const [user, setUser] = useState(starterNames[Math.floor(Math.random()*starterNames.length)])
   const ws = useRef(null);
+
   useEffect(() => {
     //hardcoded backend wee
     ws.current = new WebSocket("ws://dave.quest:3000");
@@ -30,24 +31,23 @@ function App() {
     }
     ws.current.send(JSON.stringify({guy: user, kind: 2}));
   }
-  
+
   return (
     <>
       <h1> davechat </h1>
 
       <textarea rows="20" cols="40" value={messages} readOnly="true"/>
 
-      <MessageBox socket={ws} name={user}/>
+      <ChatBox socket={ws} name={user}/>
       <form onSubmit={sendName}>
         <input type="text" 
           rows={1} 
           cols={12} 
           maxLength={12} 
           value={user} 
-          onChange={ guy => setUser(guy.target.value)} 
+          onChange={ e => setUser(e.target.value) }
         />
       </form>
-     
     </>
   )
 }

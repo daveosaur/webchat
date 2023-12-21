@@ -1,6 +1,6 @@
 import {useState} from 'react'
 
-export default function MessageBox({socket, name}) {
+export default function ChatBox({socket, name}) {
 	const [postContent, setPost] = useState("");
 
 	function handleSubmit(e) {
