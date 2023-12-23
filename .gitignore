@@ -2,3 +2,4 @@
 /webchat_client/dist
 
 server/webchat.db
+server/server
