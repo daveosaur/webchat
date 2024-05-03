@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import './app.css'
 
 export default function ChatBox({socket, name}) {
 	const [postContent, setPost] = useState("");
@@ -20,6 +21,7 @@ export default function ChatBox({socket, name}) {
 	return (
 		<form name="chat" method="post" onSubmit={handleSubmit}>
 			<input
+				id="boogle"
 				type="text"
 				value={postContent}
 				onChange={e => setPost(e.target.value)}

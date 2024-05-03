@@ -1,0 +1,13 @@
+body {
+	background: black;
+}
+
+#boogle {
+	background: grey;
+	border: 2px solid black;
+	color: white;
+}
+
+h1 {
+	color: white;
+}

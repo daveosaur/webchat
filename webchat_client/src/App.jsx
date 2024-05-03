@@ -1,13 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
+import './app.css'
 import ChatBox from './chatbox.jsx'
 
 function App() {
   const [messages, setMessage] = useState("");
-  const [logged, setLogged] = useState(false)
-  // const [user, setUser] = useState(starterNames[Math.floor(Math.random()*starterNames.length)])
-  const [user, setUser] = useState("")
+  const [logged, setLogged] = useState(false);
+  // const [user, setUser] = useState(starterNames[Math.floor(Math.random()*starterNames.length)]);
+  const [user, setUser] = useState("");
   const ws = useRef(null);
   const chatW = useRef(null);
+
+  // const [state, setState] = useState({
+  //   logged: false,
+  //   user: "",
+  //   messages: "",
+  // });
 
   useEffect(() => {
     //hardcoded backend wee
@@ -15,6 +22,7 @@ function App() {
     // ws.current.onopen = () => {
     //   // ws.current.send(JSON.stringify({guy: user, kind: 0}))
     // };
+
     return () => ws.current.close();
   }, []);
 
@@ -60,6 +68,7 @@ function App() {
       {logged ? (
         <>
           <textarea 
+            id="boogle"
             ref={chatW}
             rows="20" 
             cols="40" 
@@ -67,7 +76,7 @@ function App() {
             readOnly="true"/>
           <ChatBox socket={ws} name={user}/>
           <form onSubmit={rename}>
-            <input type="text" 
+            <input id="boogle"type="text" 
               rows={1} 
               cols={12} 
               maxLength={12} 
